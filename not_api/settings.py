@@ -176,8 +176,8 @@ if getenv('DEBUG') == 'True':
     CORS_ALLOW_ALL_ORIGINS = True
 else:
     CORS_ALLOWED_ORIGINS = [
-        getenv('ALLOWED_ONE'),
-        getenv('ALLOWED_TWO')
+        getenv('ALLOWED_ORIGINS_ONE'),
+        getenv('ALLOWED_ORIGINS_TWO')
     ]
     STATIC_ROOT = BASE_DIR / 'staticfiles/'
     # CSRF_COOKIE_SECURE = True
