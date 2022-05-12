@@ -33,10 +33,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     token = serializers.SerializerMethodField(read_only=True)
+    password = serializers.CharField(
+            style={'input_type': 'password'},
+            required=True
+    )
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'token')
+        fields = ('id', 'email', 'password', 'username', 'first_name', 'last_name', 'token')
 
     def get_token(self, obj: Profile) -> str:
         token = RefreshToken.for_user(obj)

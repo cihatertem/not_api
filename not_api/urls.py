@@ -9,6 +9,8 @@ admin_url = 'admin/' if getenv("DEBUG") == "True" else getenv('ADMIN_ADDRESS')
 
 urlpatterns = [
     path(admin_url, admin.site.urls),
-    path('api-auth/', include('rest_framework.urls')),
-    path('note_app/', include('base.urls', namespace='base'))
+    # path('api-auth/', include('rest_framework.urls')),
+    path('note_app/', include(('base.urls_cls', 'base'), namespace='class_based')) \
+        if getenv('VIEW_BASED') == 'CLASS' \
+        else path('note_app/', include(('base.urls', 'base'), namespace='func_based')),
 ]

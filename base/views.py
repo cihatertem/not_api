@@ -1,4 +1,5 @@
 from django.db import IntegrityError
+from django.db.models import Q
 from django.http.request import HttpRequest
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
@@ -24,18 +25,18 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
 @api_view(('GET',))
 def get_routes(request: HttpRequest) -> Response:
-    routes = [
-        'routes: /note_app/api/',
-        'register: /note_app/api/users/register',
-        'login: /note_app/api/users/login',
-        'login_refresh: /note_app/api/users/login/refresh',
-        'profile: /note_app/api/users/profile',
-        'the user\'s all notes: /note_app/api/notes',
-        'the user\'s single note: /note_app/api/notes/<str:note_id>',
-        'the user\'s all categories: /note_app/api/categories',
-        'the user\'s single category: /note_app/api/categories/<str:category_id>',
-        'the user\'s single category\'s notes: /note_app/api/categories/<str:category_id>/notes',
-    ]
+    routes = {
+        'routes': '/note_app/api',
+        'register': '/note_app/api/users',
+        'login': '/note_app/api/token/login',
+        'login_refresh': '/note_app/api/token/login/refresh',
+        'profile': '/note_app/api/profile',
+        'the user\'s all notes': '/note_app/api/notes',
+        'the user\'s single note': '/note_app/api/notes/<str:note_id>',
+        'the user\'s all categories': '/note_app/api/categories',
+        'the user\'s single category': '/note_app/api/categories/<str:category_id>',
+        'the user\'s single category\'s notes': '/note_app/api/categories/<str:category_id>/notes',
+    }
 
     return Response(routes)
 
@@ -44,17 +45,28 @@ def get_routes(request: HttpRequest) -> Response:
 @permission_classes((IsAuthenticated,))
 def note_list(request: HttpRequest) -> Response:
     try:
-        notes = Note.objects.all().filter(owner=request.user)
+        notes = Note.objects.filter(owner=request.user)
     except Note.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
+        if params := request.query_params:
+            if search := params.get('search', default=None):
+                notes = notes.filter(
+                        Q(title__icontains=search)
+                        | Q(body__icontains=search)
+                )
+            if pin := params.get('pin', default=None):
+                notes = notes.filter(
+                        Q(is_pinned__exact=pin.capitalize())
+                )
         serializer = NoteSerializer(notes, many=True)
         return Response(serializer.data)
 
     if request.method == 'POST':
         serializer = NoteSerializer(data=request.data, many=False)
         if serializer.is_valid():
+            print(request.data)
             serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -92,11 +104,17 @@ def single_note(request: HttpRequest, note_id: str) -> Response:
 @permission_classes((IsAuthenticated,))
 def category_list(request: HttpRequest) -> Response:
     try:
-        categories = Category.objects.all().filter(owner=request.user)
+        categories = Category.objects.filter(owner=request.user)
     except Category.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
+        if params := request.query_params:
+            if name := params.get('name', default=None):
+                categories = categories.filter(
+                        Q(name__icontains=name)
+                )
+
         serializer = CategorySerializer(categories, many=True)
         return Response(serializer.data)
 
@@ -147,7 +165,7 @@ def category_notes(request: HttpRequest, category_id: str) -> Response:
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     try:
-        notes = category.note_set.all().filter(owner=request.user)
+        notes = category.note_set.filter(owner=request.user)
     except Note.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -158,18 +176,23 @@ def category_notes(request: HttpRequest, category_id: str) -> Response:
 @api_view(('POST',))
 def create_user(request: HttpRequest) -> Response:
     data = request.data
-    try:
-        user = User.objects.create(
-                username=data['username'],
-                email=data['email'],
-                password=make_password(data['password'])
-        )
-    except IntegrityError:
-        data = {'message': 'User already registered!'}
-        return Response(data, status=status.HTTP_409_CONFLICT)
+    serialized_data = UserSerializer(data=data)
+    if serialized_data.is_valid():
+        try:
+            user = User.objects.create(
+                    username=data['username'],
+                    email=data['email'],
+                    password=make_password(data['password']),
+                    first_name=data['first_name'] if data.get('first_name') else None,
+                    last_name=data['last_name'] if data.get('last_name') else None,
+            )
+        except IntegrityError:
+            data = {'message': 'User already registered!'}
+            return Response(data, status=status.HTTP_409_CONFLICT)
 
-    serializer = UserSerializer(user, many=False)
-    return Response(serializer.data)
+        serializer = UserSerializer(user, many=False)
+        return Response(serializer.data)
+    return Response(serialized_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(('GET', 'PUT', 'DELETE'))

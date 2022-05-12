@@ -8,7 +8,8 @@ from uuid import uuid4
 # Create your models here.
 class MyUser(AbstractUser):
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+
+    REQUIRED_FIELDS = ('username', 'password')
     id = models.UUIDField(
             default=uuid4,
             unique=True,

@@ -6,10 +6,10 @@ app_name = 'base'
 
 urlpatterns = [
     path('api', views.get_routes, name='routes'),
-    path('api/users/login', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/users/login/refresh', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/users/register', views.create_user, name='create_user'),
-    path('api/users/profile', views.profile_handler, name='profile'),
+    path('api/token/login', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/login/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/users', views.create_user, name='create_user'),
+    path('api/profile', views.profile_handler, name='profile'),
     path('api/notes', views.note_list, name='notes'),
     path('api/notes/<str:note_id>', views.single_note, name='note'),
     path('api/categories', views.category_list, name='categories'),
